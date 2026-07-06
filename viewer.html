@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; }
+body { background: transparent; overflow: hidden; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+<script>
+const MOTION_CYCLE = [
+  ["mtn_06",8],["mtn_07",10],["mtn_00",12],["Hiyori_m01",7],
+  ["mtn_06",8],["Hiyori_m09",6],["mtn_07",10],["mtn_02",8],
+  ["Hiyori_m04",7],["mtn_05",10],
+];
+(async () => {
+  const app = new PIXI.Application({
+    view: document.getElementById('canvas'),
+    width: 1920, height: 1080,
+    backgroundAlpha: 0, antialias: true,
+  });
+  const model = await PIXI.live2d.Live2DModel.from('http://localhost:8765/model/6xb.model3.json');
+  app.stage.addChild(model);
+  model.anchor.set(0.5, 0.0);
+  model.x = 960; model.y = 0;
+  model.scale.set(0.10);
+  let i = 0;
+  function next() {
+    const [name, delay] = MOTION_CYCLE[i++ % MOTION_CYCLE.length];
+    model.motion(name);
+    setTimeout(next, delay * 1000);
+  }
+  setTimeout(next, 2000);
+})();
+</script>
+</body>
+</html>

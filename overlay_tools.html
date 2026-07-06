@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Мизури — оверлей инструменты</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0e0e0e; color: #eee; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ── Навигация ── */
+  nav { display: flex; gap: 4px; padding: 10px; background: #1a1a1a; border-bottom: 1px solid #333; }
+  nav button { padding: 8px 18px; background: #2a2a2a; color: #aaa; border: 1px solid #444; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  nav button.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+
+  /* ── Панели ── */
+  .panel { display: none; padding: 20px; }
+  .panel.active { display: block; }
+
+  /* ── Общие элементы ── */
+  input[type=text], textarea, select {
+    background: #1e1e1e; color: #eee; border: 1px solid #444; border-radius: 6px;
+    padding: 8px 12px; font-size: 14px; outline: none;
+  }
+  input[type=text]:focus, textarea:focus { border-color: #7c3aed; }
+  button.btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; }
+  button.btn-purple { background: #7c3aed; color: #fff; }
+  button.btn-red    { background: #dc2626; color: #fff; }
+  button.btn-green  { background: #16a34a; color: #fff; }
+  button.btn-gray   { background: #374151; color: #eee; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+
+  /* ════════════════════════════════
+     ТИР ЛИСТ
+  ════════════════════════════════ */
+  #tierlist-board { margin-top: 16px; }
+  .tier-row { display: flex; align-items: stretch; margin-bottom: 6px; border-radius: 8px; overflow: hidden; min-height: 64px; }
+  .tier-label {
+    width: 90px; min-width: 90px; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; cursor: pointer; user-select: none;
+    text-align: center; padding: 4px; line-height: 1.2;
+  }
+  .tier-items {
+    flex: 1; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px;
+    background: #1a1a1a; border: 1px solid #333; border-left: none;
+    min-height: 64px;
+  }
+  .tier-item {
+    background: #2d2d2d; border: 1px solid #555; border-radius: 6px;
+    padding: 6px 12px; font-size: 14px; cursor: grab; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tier-item:active { cursor: grabbing; opacity: 0.7; }
+  .tier-item .del { color: #666; cursor: pointer; font-size: 12px; }
+  .tier-item .del:hover { color: #f87171; }
+  .unranked-pool {
+    margin-top: 12px; padding: 10px; background: #1a1a1a; border: 1px dashed #444;
+    border-radius: 8px; min-height: 60px; display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .tier-row.drag-over .tier-items,
+  .unranked-pool.drag-over { border-color: #7c3aed; background: #1e1530; }
+
+  /* ════════════════════════════════
+     РЕД ФЛАГ / ГРИН ФЛАГ
+  ════════════════════════════════ */
+  .flag-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .flag-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: #1a1a1a; border-radius: 8px; border-left: 4px solid #555;
+    font-size: 15px;
+  }
+  .flag-item.red   { border-left-color: #dc2626; }
+  .flag-item.green { border-left-color: #16a34a; }
+  .flag-item.yellow{ border-left-color: #ca8a04; }
+  .flag-emoji { font-size: 20px; min-width: 28px; text-align: center; }
+  .flag-text { flex: 1; }
+  .flag-cat { font-size: 11px; color: #888; margin-left: 4px; }
+  .flag-controls { display: flex; gap: 4px; }
+  .flag-controls button { padding: 3px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; }
+
+  /* ════════════════════════════════
+     ГОЛОСОВАНИЕ
+  ════════════════════════════════ */
+  .vote-option { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .vote-bar-wrap { flex: 1; background: #1a1a1a; border-radius: 6px; height: 32px; overflow: hidden; position: relative; }
+  .vote-bar { height: 100%; background: #7c3aed; transition: width 0.4s; }
+  .vote-bar-label { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 600; }
+  .vote-count { min-width: 40px; text-align: right; font-size: 14px; color: #aaa; }
+  .vote-pct { min-width: 40px; text-align: right; font-size: 14px; color: #7c3aed; font-weight: 700; }
+
+  /* ════════════════════════════════
+     СПИСОК / ЧЕКЛИСТ
+  ════════════════════════════════ */
+  .checklist { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .check-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: #1a1a1a; border-radius: 8px; font-size: 15px; cursor: pointer;
+  }
+  .check-item.done { opacity: 0.5; text-decoration: line-through; }
+  .check-box { width: 20px; height: 20px; border: 2px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check-item.done .check-box { background: #16a34a; border-color: #16a34a; }
+
+  /* ════════════════════════════════
+     НАСТРОЙКИ ОТОБРАЖЕНИЯ
+  ════════════════════════════════ */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .setting-card { background: #1a1a1a; border-radius: 8px; padding: 14px; }
+  .setting-card label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+  input[type=range] { width: 100%; accent-color: #7c3aed; }
+  input[type=color] { width: 48px; height: 32px; border: none; border-radius: 4px; cursor: pointer; background: none; }
+
+  /* ── Превью для стрима ── */
+  #stream-preview {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg, #0e0e0e); z-index: 1000; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px;
+  }
+  #stream-preview.show { display: flex; }
+  #preview-close { position: fixed; top: 12px; right: 12px; z-index: 1001; }
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="active" onclick="tab('tierlist')">🏆 Тир лист</button>
+  <button onclick="tab('flags')">🚩 Флаги</button>
+  <button onclick="tab('vote')">📊 Голосование</button>
+  <button onclick="tab('checklist')">✅ Чеклист</button>
+  <button onclick="tab('settings')">⚙️ Настройки</button>
+  <button onclick="tab('music')">🎵 Музыка</button>
+  <button class="btn btn-purple" style="margin-left:auto" onclick="streamPreview()">📺 Превью стрима</button>
+</nav>
+
+<!-- ════════════════════════════════
+     ТИР ЛИСТ
+════════════════════════════════ -->
+<div id="panel-tierlist" class="panel active">
+  <div class="row">
+    <input type="text" id="tl-item-input" placeholder="Добавить элемент..." style="flex:1">
+    <button class="btn btn-purple" onclick="tlAddItem()">+ Добавить</button>
+    <button class="btn btn-gray" onclick="tlAddTier()">+ Тир</button>
+    <button class="btn btn-gray" onclick="tlReset()">Сбросить всё</button>
+  </div>
+  <div id="tierlist-board"></div>
+  <div style="margin-top:10px;color:#888;font-size:13px">Нераспределённые:</div>
+  <div id="tl-pool" class="unranked-pool" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="tlDrop(event,'pool')"></div>
+</div>
+
+<!-- ════════════════════════════════
+     ФЛАГИ
+════════════════════════════════ -->
+<div id="panel-flags" class="panel">
+  <div class="row">
+    <input type="text" id="flag-input" placeholder="Описание..." style="flex:1">
+    <select id="flag-type">
+      <option value="red">🚩 Ред флаг</option>
+      <option value="green">✅ Грин флаг</option>
+      <option value="yellow">⚠️ Жёлтый</option>
+    </select>
+    <input type="text" id="flag-cat" placeholder="Категория" style="width:130px">
+    <button class="btn btn-purple" onclick="flagAdd()">+ Добавить</button>
+  </div>
+  <div class="row" style="gap:6px;flex-wrap:wrap" id="flag-cats"></div>
+  <div class="flag-list" id="flag-list"></div>
+</div>
+
+<!-- ════════════════════════════════
+     ГОЛОСОВАНИЕ
+════════════════════════════════ -->
+<div id="panel-vote" class="panel">
+  <div class="row">
+    <input type="text" id="vote-q" placeholder="Вопрос..." style="flex:1">
+    <button class="btn btn-purple" onclick="voteStart()">Запустить</button>
+    <button class="btn btn-gray" onclick="voteReset()">Сбросить</button>
+  </div>
+  <div id="vote-options-setup" style="margin-bottom:12px">
+    <div id="vote-opts-list"></div>
+    <button class="btn btn-gray" style="margin-top:6px" onclick="voteAddOpt()">+ Вариант</button>
+  </div>
+  <div id="vote-live" style="display:none">
+    <div style="font-size:18px;font-weight:700;margin-bottom:14px" id="vote-q-display"></div>
+    <div id="vote-bars"></div>
+    <div style="margin-top:12px;color:#888;font-size:13px">Кликни на вариант чтобы добавить голос</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     ЧЕКЛИСТ
+════════════════════════════════ -->
+<div id="panel-checklist" class="panel">
+  <div class="row">
+    <input type="text" id="cl-input" placeholder="Новый пункт..." style="flex:1">
+    <button class="btn btn-purple" onclick="clAdd()">+ Добавить</button>
+    <button class="btn btn-gray" onclick="clClear()">Очистить выполненные</button>
+  </div>
+  <div class="checklist" id="checklist"></div>
+</div>
+
+<!-- ════════════════════════════════
+     НАСТРОЙКИ
+════════════════════════════════ -->
+<div id="panel-settings" class="panel">
+  <div class="settings-grid">
+    <div class="setting-card">
+      <label>Фон страницы</label>
+      <input type="color" id="s-bg" value="#0e0e0e" oninput="applySettings()">
+    </div>
+    <div class="setting-card">
+      <label>Цвет акцента</label>
+      <input type="color" id="s-accent" value="#7c3aed" oninput="applySettings()">
+    </div>
+    <div class="setting-card">
+      <label>Размер шрифта: <span id="s-fs-val">15</span>px</label>
+      <input type="range" id="s-fs" min="11" max="28" value="15" oninput="applySettings()">
+    </div>
+    <div class="setting-card">
+      <label>Прозрачность фона элементов: <span id="s-op-val">100</span>%</label>
+      <input type="range" id="s-op" min="20" max="100" value="100" oninput="applySettings()">
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     МУЗЫКА
+════════════════════════════════ -->
+<div id="panel-music" class="panel">
+  <div style="max-width:600px">
+    <h3 style="margin-bottom:16px;color:#a78bfa">🎵 Фоновая музыка</h3>
+    <div class="row">
+      <input type="text" id="music-url" placeholder="YouTube ссылка..." style="flex:1" onkeydown="if(event.key==='Enter')musicPlay()">
+      <button class="btn btn-purple" onclick="musicPlay()">▶ Играть</button>
+      <button class="btn btn-red" onclick="musicStop()">■ Стоп</button>
+    </div>
+    <div id="music-status" style="margin-top:12px;padding:10px;background:#1a1a1a;border-radius:8px;font-size:14px;color:#aaa;min-height:40px">
+      Ничего не играет
+    </div>
+    <div style="margin-top:16px;color:#666;font-size:13px">
+      Громкость музыки: ~25% (не перебивает Мизури)<br>
+      Поддерживаются любые YouTube ссылки
+    </div>
+  </div>
+</div>
+
+<!-- Превью стрима -->
+<div id="stream-preview">
+  <button class="btn btn-gray" id="preview-close" onclick="document.getElementById('stream-preview').classList.remove('show')">✕ Закрыть</button>
+  <div id="preview-content" style="width:100%;max-width:1200px"></div>
+</div>
+
+<script>
+// ════════════════════════════════
+// НАВИГАЦИЯ
+// ════════════════════════════════
+function tab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ════════════════════════════════
+// ТИР ЛИСТ
+// ════════════════════════════════
+const TL_DEFAULTS = [
+  { label: 'S', color: '#ef4444' },
+  { label: 'A', color: '#f97316' },
+  { label: 'B', color: '#eab308' },
+  { label: 'C', color: '#22c55e' },
+  { label: 'D', color: '#3b82f6' },
+  { label: 'F', color: '#8b5cf6' },
+];
+let tlTiers = [
+  {"label": "100% НЕТ!!! (опасно)", "color": "#ef4444", "items": []},
+  {"label": "Ред флаг (лучше беги)", "color": "#f97316", "items": []},
+  {"label": "Оранжевый флаг (можно подумать/потерпеть)", "color": "#f59e0b", "items": []},
+  {"label": "Желтый флаг (приемлимо)", "color": "#eab308", "items": []},
+  {"label": "Мне это нравится", "color": "#22c55e", "items": []}
+];
+let tlPool = ["Красит волосы","Считает что бить детей это ок","Делит расходы пополам","Не бреет подмышки","Осуждает если ты ешь больше чем он","Не дарит цветы пустая трата денег","Маменькин сынок","Сплетник","Неухоженный","Скуп на подарки но имеет на них средства","Стремно купить прокладки/тампоны","Мало разговаривает","Не пользуется освежителем в туалете","Стеснитель","Неуважителен к своим родителям","Снимал проститутку","Всегда во всем слушает свою маму","Снимает тиктоки","Всегда спрашивает на что потратила деньги","Пьет энергетики","Забывает про годовщину отношений","Никогда не ставит ) в конце сообщения","Плохие зубы","Пассивная агрессия","Сидел в тюрьме","Очень ревнивый","Не моет руки после туалета","Никогда не пишет первый","Темщик","Хочет чтобы ты готовила","Нет машины","Не запоминает что для тебя комфортно важно","Нет накоплений","Разбрасывает носки и вещи","Иногда плачет","Не занимается спортом","Боится разговоров о будущем","Домосед","Часто грязная обувь","Моется раз в неделю","Странные друзья","Вегатерианец","Стыдит если ты не бреешь ноги","Бреет попу","Смотрит аниме мультики","Работа важнее семьи","Никогда не дает чаевые","Смотрит тикитоки и т.п","Плохое чувство юмора","Вырос без отца","Зарабатывает меньше чем ты","Не совпадает чувство юмора","Не совпадают музыкальные вкусы","Переписывается в ватсапе","Смотрит новости по тв","Не танцует","Очень любит тусить","Полный трезвенник","Активно ведет соц сети","Очень неуверенный в себе","Не дает трогать свою попу","Был женат","Рост меньше 170 см","Часто врет","Играет в симс","Ебет мозги ну ты объясни зачем мне это","Молчит во время секса","Есть ребенок","Водил пьяным","Очень волосатое тело","Лысый","Пытается тебя перевоспитать","Скорострел","Дарит подарки только по вишлисту","Отчитывает тебя за опоздания","Общается с бывшими","Служил в армии","Стример","Любит походы с палатками","Секс раз в неделю","Любит расистские шутки","Не любит животных","Смеется над камеди клаб","Плохо водит машину","Нет хобби и интересов","Всегда опаздывает","Врет по мелочам","Носит узкие джинсы","Курит","Делает маникюр","Не хочет детей","Говорит что неинтересны твои друзья","Было больше 5 бывших","Не читает книги","Сильная перхоть","Одевает только брендовые шмотки","Сигма","Есть кредиты не ипотека","Не берет на себя ответственность","Газлайтёр","Играет доту кс","Может тебя ударить","Нет общих интересов","Курит траву","Наивный","Редко обнимает перед сном","Может влезть в драку","Издает звуки во время секса","Нарцисс","Бьет во время секса","Скрывает свой заработок","Невысокий уровень интеллекта","Футбольный фанат","Тотальный контроль","ЧСВ","Не дает спать до обеда будит утром","Не опускает стульчак","Громко орет когда играет","Не занимается сексом если ты не побрилась","Плохо говорит о бывших","Не умеет красиво фотографировать","Татуировки","Скуф","Нет ни в одной соц сети","Смотрит мелодрамы","Рыгает","Парит вейпы поды одноразки","Смотрит Артемия Лебедева","Нет друзей","Пишет тебе 24/7","Рост больше 170см","Хочет чтобы всегда был маник","Много играет в игры","Собственник","Много половых партнеров больше 10","Слишком пассивный","Не умеет красиво одеваться","Избегает конфликтов и выяснение отношений","Всегда в телефоне","Выпивает больше 1 раза в неделю","Мало зарабатывает и ничего не меняет","Не интересуется как прошел твой день","Не может сам записаться к врачу","Иногда ворует в магазинах","Много друзей больше 10","Не умеет готовить","Постоянно стучит или дергает ногой","Скрывает ваши отношения","Не говорит Я люблю тебя","Засыпает сразу после секса","Лудоман проблемы с азарт играми","Длинные волосы","Не любит путешествовать","Среди друзей много девушек больше 50%","Не хочет жениться"];
+let tlDragItem = null;
+let tlDragFrom = null; // 'pool' | tier index
+
+function tlRender() {
+  const board = document.getElementById('tierlist-board');
+  board.innerHTML = '';
+  tlTiers.forEach((tier, ti) => {
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = `
+      <div class="tier-label" style="background:${tier.color}" title="Двойной клик — переименовать" ondblclick="tlRenameTier(${ti})">${tier.label}</div>
+      <div class="tier-items" ondragover="event.preventDefault();this.parentElement.classList.add('drag-over')" ondragleave="this.parentElement.classList.remove('drag-over')" ondrop="tlDrop(event,${ti})">
+        ${tier.items.map((item, ii) => `
+          <div class="tier-item" draggable="true" ondragstart="tlDragStart(event,${ti},${ii})">
+            ${item}
+            <span class="del" onclick="tlRemoveItem(${ti},${ii})">✕</span>
+          </div>`).join('')}
+      </div>`;
+    board.appendChild(row);
+  });
+  // Pool
+  const pool = document.getElementById('tl-pool');
+  pool.innerHTML = tlPool.map((item, i) => `
+    <div class="tier-item" draggable="true" ondragstart="tlDragStart(event,'pool',${i})">
+      ${item}
+      <span class="del" onclick="tlRemovePool(${i})">✕</span>
+    </div>`).join('');
+}
+
+function tlAddItem() {
+  const v = document.getElementById('tl-item-input').value.trim();
+  if (!v) return;
+  tlPool.push(v);
+  document.getElementById('tl-item-input').value = '';
+  tlRender();
+}
+
+function tlAddTier() {
+  const label = prompt('Название тира:', 'E');
+  if (!label) return;
+  const color = '#' + Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
+  tlTiers.push({ label, color, items: [] });
+  tlRender();
+}
+
+function tlRenameTier(ti) {
+  const label = prompt('Новое название:', tlTiers[ti].label);
+  if (label) { tlTiers[ti].label = label; tlRender(); }
+}
+
+function tlDragStart(e, from, idx) {
+  tlDragFrom = from;
+  tlDragItem = idx;
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function tlDrop(e, to) {
+  e.preventDefault();
+  document.querySelectorAll('.tier-row').forEach(r => r.classList.remove('drag-over'));
+  document.getElementById('tl-pool').classList.remove('drag-over');
+  if (tlDragItem === null) return;
+  let item;
+  if (tlDragFrom === 'pool') {
+    item = tlPool.splice(tlDragItem, 1)[0];
+  } else {
+    item = tlTiers[tlDragFrom].items.splice(tlDragItem, 1)[0];
+  }
+  if (to === 'pool') tlPool.push(item);
+  else tlTiers[to].items.push(item);
+  tlDragItem = null; tlDragFrom = null;
+  tlRender();
+}
+
+function tlRemoveItem(ti, ii) { tlTiers[ti].items.splice(ii, 1); tlRender(); }
+function tlRemovePool(i) { tlPool.splice(i, 1); tlRender(); }
+function tlReset() { if (confirm('Сбросить тир лист?')) { tlTiers.forEach(t => t.items = []); tlPool = []; tlRender(); } }
+
+document.getElementById('tl-item-input').addEventListener('keydown', e => { if (e.key === 'Enter') tlAddItem(); });
+tlRender();
+
+// ════════════════════════════════
+// ФЛАГИ
+// ════════════════════════════════
+let flags = [];
+let flagFilter = '';
+
+const FLAG_EMOJI = { red: '🚩', green: '✅', yellow: '⚠️' };
+
+function flagAdd() {
+  const text = document.getElementById('flag-input').value.trim();
+  const type = document.getElementById('flag-type').value;
+  const cat  = document.getElementById('flag-cat').value.trim() || 'Общее';
+  if (!text) return;
+  flags.push({ text, type, cat, id: Date.now() });
+  document.getElementById('flag-input').value = '';
+  flagRender();
+}
+
+function flagRender() {
+  const list = document.getElementById('flag-list');
+  const cats = [...new Set(flags.map(f => f.cat))];
+  // Кнопки категорий
+  const catsEl = document.getElementById('flag-cats');
+  catsEl.innerHTML = `<button class="btn btn-gray" style="font-size:12px;padding:4px 10px" onclick="flagFilter='';flagRender()">Все</button>` +
+    cats.map(c => `<button class="btn btn-gray" style="font-size:12px;padding:4px 10px;${flagFilter===c?'background:#7c3aed':''}" onclick="flagFilter='${c}';flagRender()">${c}</button>`).join('');
+  const shown = flagFilter ? flags.filter(f => f.cat === flagFilter) : flags;
+  list.innerHTML = shown.map(f => `
+    <div class="flag-item ${f.type}">
+      <span class="flag-emoji">${FLAG_EMOJI[f.type]}</span>
+      <span class="flag-text">${f.text} <span class="flag-cat">[${f.cat}]</span></span>
+      <div class="flag-controls">
+        <button style="background:#dc2626;color:#fff" onclick="flagDel(${f.id})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function flagDel(id) { flags = flags.filter(f => f.id !== id); flagRender(); }
+document.getElementById('flag-input').addEventListener('keydown', e => { if (e.key === 'Enter') flagAdd(); });
+
+// ════════════════════════════════
+// ГОЛОСОВАНИЕ
+// ════════════════════════════════
+let voteOpts = ['Да', 'Нет'];
+let voteVotes = [];
+let voteLive = false;
+
+function voteRenderSetup() {
+  document.getElementById('vote-opts-list').innerHTML = voteOpts.map((o, i) => `
+    <div class="row">
+      <input type="text" value="${o}" style="flex:1" oninput="voteOpts[${i}]=this.value">
+      <button class="btn btn-gray" onclick="voteOpts.splice(${i},1);voteRenderSetup()">✕</button>
+    </div>`).join('');
+}
+
+function voteAddOpt() { voteOpts.push('Вариант ' + (voteOpts.length + 1)); voteRenderSetup(); }
+
+function voteStart() {
+  const q = document.getElementById('vote-q').value.trim();
+  if (!q || voteOpts.length < 2) return;
+  voteVotes = voteOpts.map(() => 0);
+  voteLive = true;
+  document.getElementById('vote-options-setup').style.display = 'none';
+  document.getElementById('vote-live').style.display = 'block';
+  document.getElementById('vote-q-display').textContent = q;
+  voteRenderBars();
+}
+
+function voteRenderBars() {
+  const total = voteVotes.reduce((a, b) => a + b, 0) || 1;
+  const colors = ['#7c3aed','#2563eb','#16a34a','#dc2626','#ca8a04','#0891b2'];
+  document.getElementById('vote-bars').innerHTML = voteOpts.map((o, i) => {
+    const pct = Math.round(voteVotes[i] / total * 100);
+    return `<div class="vote-option" onclick="voteVotes[${i}]++;voteRenderBars()">
+      <div style="min-width:120px;font-size:14px">${o}</div>
+      <div class="vote-bar-wrap">
+        <div class="vote-bar" style="width:${pct}%;background:${colors[i%colors.length]}"></div>
+        <span class="vote-bar-label">${o}</span>
+      </div>
+      <span class="vote-count">${voteVotes[i]}</span>
+      <span class="vote-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+function voteReset() {
+  voteLive = false;
+  voteVotes = [];
+  document.getElementById('vote-options-setup').style.display = 'block';
+  document.getElementById('vote-live').style.display = 'none';
+  voteRenderSetup();
+}
+
+voteRenderSetup();
+
+// ════════════════════════════════
+// ЧЕКЛИСТ
+// ════════════════════════════════
+let checklist = [];
+
+function clAdd() {
+  const v = document.getElementById('cl-input').value.trim();
+  if (!v) return;
+  checklist.push({ text: v, done: false, id: Date.now() });
+  document.getElementById('cl-input').value = '';
+  clRender();
+}
+
+function clToggle(id) {
+  const item = checklist.find(c => c.id === id);
+  if (item) item.done = !item.done;
+  clRender();
+}
+
+function clClear() { checklist = checklist.filter(c => !c.done); clRender(); }
+
+function clRender() {
+  document.getElementById('checklist').innerHTML = checklist.map(c => `
+    <div class="check-item ${c.done ? 'done' : ''}" onclick="clToggle(${c.id})">
+      <div class="check-box">${c.done ? '✓' : ''}</div>
+      <span>${c.text}</span>
+      <span style="margin-left:auto;color:#555;cursor:pointer" onclick="event.stopPropagation();checklist=checklist.filter(x=>x.id!=${c.id});clRender()">✕</span>
+    </div>`).join('');
+}
+
+document.getElementById('cl-input').addEventListener('keydown', e => { if (e.key === 'Enter') clAdd(); });
+
+// ════════════════════════════════
+// НАСТРОЙКИ
+// ════════════════════════════════
+function applySettings() {
+  const bg = document.getElementById('s-bg').value;
+  const accent = document.getElementById('s-accent').value;
+  const fs = document.getElementById('s-fs').value;
+  const op = document.getElementById('s-op').value;
+  document.getElementById('s-fs-val').textContent = fs;
+  document.getElementById('s-op-val').textContent = op;
+  document.documentElement.style.setProperty('--bg', bg);
+  document.body.style.background = bg;
+  document.body.style.fontSize = fs + 'px';
+  document.querySelectorAll('.tier-items,.flag-item,.check-item,.vote-bar-wrap,.unranked-pool')
+    .forEach(el => el.style.opacity = op / 100);
+  // Акцент
+  document.querySelectorAll('.btn-purple, nav button.active').forEach(el => el.style.background = accent);
+}
+
+// ════════════════════════════════
+// ПРЕВЬЮ СТРИМА (полноэкранный вид)
+// ════════════════════════════════
+function streamPreview() {
+  const active = document.querySelector('.panel.active');
+  const preview = document.getElementById('stream-preview');
+  document.getElementById('preview-content').innerHTML = active.innerHTML;
+  preview.classList.add('show');
+}
+
+// ════════════════════════════════
+// ЛОКАЛЬНОЕ СОХРАНЕНИЕ (localStorage)
+// ════════════════════════════════
+function persistSave() {
+  try {
+    localStorage.setItem('overlay_state', JSON.stringify({
+      tlTiers, tlPool, flags, checklist, voteOpts, voteVotes, voteLive,
+      voteQ: document.getElementById('vote-q').value,
+      activePanel: document.querySelector('.panel.active')?.id || 'panel-tierlist'
+    }));
+  } catch(e) {}
+}
+
+function persistLoad() {
+  try {
+    const raw = localStorage.getItem('overlay_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.tlTiers && s.tlTiers.length > 0)    { tlTiers = s.tlTiers; }
+    if (s.tlPool && s.tlPool.length > 0)      { tlPool  = s.tlPool; }
+    if (s.flags)      { flags   = s.flags; }
+    if (s.checklist)  { checklist = s.checklist; }
+    if (s.voteOpts)   { voteOpts  = s.voteOpts; }
+    if (s.voteVotes)  { voteVotes = s.voteVotes; }
+    if (s.voteLive !== undefined) { voteLive = s.voteLive; }
+    if (s.voteQ) document.getElementById('vote-q').value = s.voteQ;
+    tlRender(); flagRender(); clRender(); voteRenderSetup();
+    if (s.voteLive) {
+      voteRenderBars();
+      document.getElementById('vote-options-setup').style.display = 'none';
+      document.getElementById('vote-live').style.display = 'block';
+    }
+    if (s.activePanel) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+      const p = document.getElementById(s.activePanel);
+      if (p) { p.classList.add('active'); }
+      const idx = ['tierlist','flags','vote','checklist','settings'].indexOf(s.activePanel.replace('panel-',''));
+      if (idx >= 0) document.querySelectorAll('nav button')[idx]?.classList.add('active');
+    }
+  } catch(e) {}
+}
+
+// Загружаем при старте — только флаги/чеклист из localStorage, тир лист всегда из кода
+function loadOnStart() {
+  try {
+    const raw = localStorage.getItem('overlay_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    // Тир лист НЕ загружаем из localStorage — он вшит в код
+    if (s.flags)      { flags   = s.flags;   }
+    if (s.checklist)  { checklist = s.checklist; }
+    if (s.voteOpts)   { voteOpts  = s.voteOpts; }
+    if (s.voteVotes)  { voteVotes = s.voteVotes; }
+    if (s.voteLive !== undefined) { voteLive = s.voteLive; }
+    if (s.voteQ) document.getElementById('vote-q').value = s.voteQ;
+    flagRender(); clRender();
+  } catch(e) {}
+}
+loadOnStart();
+const STATE_URL = '/state';
+
+function saveState() {
+  persistSave();
+  const state = {
+    tlTiers: tlTiers,
+    tlPool: tlPool,
+    flags: flags,
+    checklist: checklist,
+    voteOpts: voteOpts,
+    voteVotes: voteVotes,
+    voteLive: voteLive,
+    voteQ: document.getElementById('vote-q').value,
+    activePanel: 'panel-tierlist'  // playwright всегда показывает тир лист
+  };
+  fetch(STATE_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(state)
+  }).catch(() => {});
+}
+
+// Применяем состояние от playwright (вызывается через page.evaluate)
+window.__applyState = function(state) {
+  if (!state) return;
+  if (state.tlTiers && state.tlTiers.length > 0) { tlTiers = state.tlTiers; tlRender(); }
+  if (state.tlPool  && state.tlPool.length  > 0) { tlPool  = state.tlPool;  tlRender(); }
+  if (state.flags)   { flags   = state.flags;   flagRender(); }
+  if (state.checklist) { checklist = state.checklist; clRender(); }
+  if (state.voteOpts)  { voteOpts  = state.voteOpts; }
+  if (state.voteVotes) { voteVotes = state.voteVotes; }
+  if (state.voteLive)  { voteLive  = state.voteLive; }
+  if (state.voteQ) document.getElementById('vote-q').value = state.voteQ;
+  if (state.voteLive) { voteRenderBars(); document.getElementById('vote-options-setup').style.display='none'; document.getElementById('vote-live').style.display='block'; }
+  // Переключаем активную панель
+  if (state.activePanel) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    const p = document.getElementById(state.activePanel);
+    if (p) p.classList.add('active');
+  }
+};
+
+// Автосохранение при любом изменении
+const _origTlRender = tlRender;
+tlRender = function() { _origTlRender(); saveState(); };
+const _origFlagRender = flagRender;
+flagRender = function() { _origFlagRender(); saveState(); };
+const _origClRender = clRender;
+clRender = function() { _origClRender(); saveState(); };
+const _origVoteRenderBars = voteRenderBars;
+voteRenderBars = function() { _origVoteRenderBars(); saveState(); };
+
+// Сохраняем при смене вкладки
+const _origTab = tab;
+tab = function(name) { _origTab(name); saveState(); };
+
+// ════════════════════════════════
+// МУЗЫКА
+// ════════════════════════════════
+const MUSIC_API = 'http://' + location.hostname + ':19002/music';
+
+async function musicPlay() {
+  const url = document.getElementById('music-url').value.trim();
+  if (!url) return;
+  const st = document.getElementById('music-status');
+  st.textContent = '⏳ Загружаю...';
+  st.style.color = '#a78bfa';
+  try {
+    await fetch(MUSIC_API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action: 'play', url})
+    });
+    musicPollStatus();
+  } catch(e) {
+    st.textContent = '❌ Ошибка: ' + e.message;
+    st.style.color = '#f87171';
+  }
+}
+
+async function musicStop() {
+  await fetch(MUSIC_API, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: 'stop'})
+  }).catch(() => {});
+  document.getElementById('music-status').textContent = 'Остановлено';
+  document.getElementById('music-status').style.color = '#aaa';
+}
+
+let _musicPollTimer = null;
+function musicPollStatus() {
+  if (_musicPollTimer) clearInterval(_musicPollTimer);
+  _musicPollTimer = setInterval(async () => {
+    try {
+      const r = await fetch('http://' + location.hostname + ':19002/music/status');
+      const s = await r.json();
+      const st = document.getElementById('music-status');
+      if (s.error) {
+        st.textContent = '❌ ' + s.error;
+        st.style.color = '#f87171';
+        clearInterval(_musicPollTimer);
+      } else if (s.playing) {
+        st.textContent = '🎵 Играет: ' + (s.title || '...');
+        st.style.color = '#4ade80';
+      } else {
+        st.textContent = 'Воспроизведение завершено';
+        st.style.color = '#aaa';
+        clearInterval(_musicPollTimer);
+      }
+    } catch(e) {}
+  }, 2000);
+}
+</script>
+</body>
+</html>

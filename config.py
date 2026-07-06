@@ -1,0 +1,11 @@
+GENAPI_KEY = "sk-DrghUNRBteQEsxEKfnMzjXFLAM8Xcy9AvrHKbJCRUcTYsS4A7BYtZJWQAe4S"
+GENAPI_URL = "https://api.gen-api.ru/api/v1"
+EMBED_MODEL = "text-embedding-3-small"
+COMPRESS_MODEL = "gpt-4o-mini"
+COMPRESS_THRESHOLD = 300
+TOP_K = 6
+SIM_THRESHOLD = 0.28
+LIGHTNING_KEY = "8c07466e-90c8-44db-a104-f635d4df7847"
+LIGHTNING_URL = "https://lightning.ai/api/v1"
+MAIN_MODEL = "anthropic/claude-haiku-4-5-20251001"
+STALE_DAYS = 3.0

@@ -1,0 +1,7 @@
+[
+  {"text": "Люди уходят когда им становится скучно", "level": "core", "strength": 0.8},
+  {"text": "Близость — это риск", "level": "core", "strength": 0.75},
+  {"text": "Смерть — единственное честное", "level": "intermediate", "strength": 0.65},
+  {"text": "Если первой не напишу — не напишут", "level": "intermediate", "strength": 0.6},
+  {"text": "Папа заботится но не умеет показывать", "level": "automatic", "strength": 0.5}
+]

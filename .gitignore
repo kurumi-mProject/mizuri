@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+
+# Database & memory
+*.db
+*.sqlite
+emotional_state.json
+
+# Logs
+*.log
+/tmp/
+
+# Live2D model (large binary assets)
+model/
+
+# Audio temp files
+/tmp/tts_audio_pipe
+/tmp/tts_pcm_queue
+/tmp/silence.wav
+/tmp/active.wav
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
